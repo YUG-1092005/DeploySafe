@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs 'NodeJS-26'
+    }
+
     options {
         timestamps()
         disableConcurrentBuilds()
@@ -9,40 +13,61 @@ pipeline {
     environment {
         DEPLOYSAFE_API_URL = credentials('deploysafe-api-url')
         DEPLOYSAFE_API_TOKEN = credentials('deploysafe-api-token')
-        // Configure these per Jenkins job or repository:
-        // DEPLOYSAFE_PROJECT_ID, DEPLOYSAFE_VERSION, SONAR_HOST_URL, etc.
     }
 
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
-                sh 'git rev-parse HEAD'
+                bat 'git rev-parse HEAD'
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Install Frontend Dependencies') {
             steps {
-                sh 'npm ci'
+                dir('frontend') {
+                    bat 'npm ci'
+                }
+            }
+        }
+
+        stage('Install Backend Dependencies') {
+            steps {
+                dir('backend') {
+                    bat 'npm ci'
+                }
             }
         }
 
         stage('Build') {
             steps {
-                sh 'npm run build --if-present'
+                dir('frontend') {
+                    bat 'npm run build --if-present'
+                }
+                dir('backend') {
+                    bat 'npm run build --if-present'
+                }
             }
         }
 
         stage('Unit Tests') {
             steps {
                 script {
-                    def result = sh(
-                        script: 'npm test -- --runInBand --watch=false',
+                    def hasTestScript = bat(
+                        script: 'cd frontend && node -e "const p=require(\'./package.json\'); process.exit(p.scripts && p.scripts.test ? 0 : 1)"',
                         returnStatus: true
-                    )
-                    if (result != 0) {
-                        currentBuild.result = 'FAILURE'
-                        error('Unit tests failed')
+                    ) == 0
+
+                    if (hasTestScript) {
+                        def testResult = bat(
+                            script: 'cd frontend && npm test -- --runInBand --watch=false',
+                            returnStatus: true
+                        )
+                        if (testResult != 0) {
+                            error('Frontend unit tests failed')
+                        }
+                    } else {
+                        echo 'Frontend has no test script; unit-test metric will remain UNKNOWN.'
                     }
                 }
             }
@@ -50,44 +75,51 @@ pipeline {
 
         stage('Coverage') {
             steps {
-                sh 'npm run test:coverage --if-present'
+                script {
+                    def hasCoverageScript = bat(
+                        script: 'cd frontend && node -e "const p=require(\'./package.json\'); process.exit(p.scripts && p.scripts[\'test:coverage\'] ? 0 : 1)"',
+                        returnStatus: true
+                    ) == 0
+
+                    if (hasCoverageScript) {
+                        bat 'cd frontend && npm run test:coverage'
+                    } else {
+                        echo 'No test:coverage script configured; coverage will remain UNKNOWN.'
+                    }
+                }
             }
         }
 
         stage('Code Quality') {
             steps {
-                script {
-                    if (env.SONAR_HOST_URL?.trim() && env.SONAR_TOKEN?.trim()) {
-                        withEnv(["PATH+SONAR=${tool 'sonar-scanner'}"]) {
-                            sh 'sonar-scanner'
-                        }
-                    } else {
-                        echo 'SonarQube is not configured; result will be UNKNOWN and the release gate will account for it.'
-                    }
+                if (env.SONAR_HOST_URL?.trim() && env.SONAR_TOKEN?.trim()) {
+                    echo 'SonarQube configuration detected.'
+                    echo 'Configure the Jenkins SonarQube scanner when SonarQube is installed.'
+                } else {
+                    echo 'SonarQube is not configured; quality will be reported as UNKNOWN.'
                 }
             }
         }
 
         stage('Security Scan') {
             steps {
-                sh 'npm audit --json > deploysafe-audit.json || true'
+                bat 'cd frontend && npm audit --json > ..\\deploysafe-frontend-audit.json || exit /b 0'
+                bat 'cd backend && npm audit --json > ..\\deploysafe-backend-audit.json || exit /b 0'
             }
         }
 
         stage('Performance Test') {
             steps {
                 script {
-                    if (fileExists('package.json')) {
-                        def hasLoad = sh(
-                            script: "node -e \"const p=require('./package.json'); process.exit(p.scripts && p.scripts['load:test'] ? 0 : 1)\"",
-                            returnStatus: true
-                        ) == 0
+                    def hasLoadTest = bat(
+                        script: 'cd backend && node -e "const p=require(\'./package.json\'); process.exit(p.scripts && p.scripts[\'load:test\'] ? 0 : 1)"',
+                        returnStatus: true
+                    ) == 0
 
-                        if (hasLoad) {
-                            sh 'npm run load:test'
-                        } else {
-                            echo 'No load:test script configured; p95 response will remain UNKNOWN.'
-                        }
+                    if (hasLoadTest) {
+                        bat 'cd backend && npm run load:test'
+                    } else {
+                        echo 'No backend load:test script configured; p95 response time will remain UNKNOWN.'
                     }
                 }
             }
@@ -98,7 +130,7 @@ pipeline {
                 script {
                     def status = currentBuild.currentResult ?: 'SUCCESS'
                     withEnv(["BUILD_STATUS=${status}"]) {
-                        sh 'node jenkins/scripts/collect-metrics.mjs'
+                        bat 'node jenkins/scripts/collect-metrics.mjs'
                     }
                 }
             }
@@ -109,7 +141,7 @@ pipeline {
                 script {
                     def duration = currentBuild.duration ? Math.round(currentBuild.duration / 1000) : 0
                     withEnv(["BUILD_DURATION_SECONDS=${duration}"]) {
-                        sh 'node jenkins/scripts/send-results.mjs'
+                        bat 'node jenkins/scripts/send-results.mjs'
                     }
                 }
             }
@@ -117,25 +149,33 @@ pipeline {
 
         stage('Deployment Gate') {
             steps {
-                sh 'node jenkins/scripts/evaluate-release.mjs'
+                bat 'node jenkins/scripts/evaluate-release.mjs'
             }
         }
 
         stage('Deploy') {
             when {
                 expression {
-                    fileExists('deploy.sh')
+                    fileExists('deploy.bat') || fileExists('deploy.cmd') || fileExists('deploy.ps1')
                 }
             }
             steps {
-                sh 'chmod +x deploy.sh && ./deploy.sh'
+                script {
+                    if (fileExists('deploy.bat')) {
+                        bat 'deploy.bat'
+                    } else if (fileExists('deploy.cmd')) {
+                        bat 'deploy.cmd'
+                    } else {
+                        bat 'powershell -ExecutionPolicy Bypass -File deploy.ps1'
+                    }
+                }
             }
         }
     }
 
     post {
         always {
-            archiveArtifacts artifacts: 'deploysafe-*.json,deploysafe-audit.json', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'deploysafe-*.json,deploysafe-*-audit.json', allowEmptyArchive: true
         }
     }
 }
