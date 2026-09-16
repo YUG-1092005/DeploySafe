@@ -1,0 +1,141 @@
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
+    environment {
+        DEPLOYSAFE_API_URL = credentials('deploysafe-api-url')
+        DEPLOYSAFE_API_TOKEN = credentials('deploysafe-api-token')
+        // Configure these per Jenkins job or repository:
+        // DEPLOYSAFE_PROJECT_ID, DEPLOYSAFE_VERSION, SONAR_HOST_URL, etc.
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                sh 'git rev-parse HEAD'
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm ci'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'npm run build --if-present'
+            }
+        }
+
+        stage('Unit Tests') {
+            steps {
+                script {
+                    def result = sh(
+                        script: 'npm test -- --runInBand --watch=false',
+                        returnStatus: true
+                    )
+                    if (result != 0) {
+                        currentBuild.result = 'FAILURE'
+                        error('Unit tests failed')
+                    }
+                }
+            }
+        }
+
+        stage('Coverage') {
+            steps {
+                sh 'npm run test:coverage --if-present'
+            }
+        }
+
+        stage('Code Quality') {
+            steps {
+                script {
+                    if (env.SONAR_HOST_URL?.trim() && env.SONAR_TOKEN?.trim()) {
+                        withEnv(["PATH+SONAR=${tool 'sonar-scanner'}"]) {
+                            sh 'sonar-scanner'
+                        }
+                    } else {
+                        echo 'SonarQube is not configured; result will be UNKNOWN and the release gate will account for it.'
+                    }
+                }
+            }
+        }
+
+        stage('Security Scan') {
+            steps {
+                sh 'npm audit --json > deploysafe-audit.json || true'
+            }
+        }
+
+        stage('Performance Test') {
+            steps {
+                script {
+                    if (fileExists('package.json')) {
+                        def hasLoad = sh(
+                            script: "node -e \"const p=require('./package.json'); process.exit(p.scripts && p.scripts['load:test'] ? 0 : 1)\"",
+                            returnStatus: true
+                        ) == 0
+
+                        if (hasLoad) {
+                            sh 'npm run load:test'
+                        } else {
+                            echo 'No load:test script configured; p95 response will remain UNKNOWN.'
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Collect Results') {
+            steps {
+                script {
+                    def status = currentBuild.currentResult ?: 'SUCCESS'
+                    withEnv(["BUILD_STATUS=${status}"]) {
+                        sh 'node jenkins/scripts/collect-metrics.mjs'
+                    }
+                }
+            }
+        }
+
+        stage('Send Results to DeploySafe') {
+            steps {
+                script {
+                    def duration = currentBuild.duration ? Math.round(currentBuild.duration / 1000) : 0
+                    withEnv(["BUILD_DURATION_SECONDS=${duration}"]) {
+                        sh 'node jenkins/scripts/send-results.mjs'
+                    }
+                }
+            }
+        }
+
+        stage('Deployment Gate') {
+            steps {
+                sh 'node jenkins/scripts/evaluate-release.mjs'
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                expression {
+                    fileExists('deploy.sh')
+                }
+            }
+            steps {
+                sh 'chmod +x deploy.sh && ./deploy.sh'
+            }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: 'deploysafe-*.json,deploysafe-audit.json', allowEmptyArchive: true
+        }
+    }
+}
