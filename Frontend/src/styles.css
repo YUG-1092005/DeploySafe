@@ -22,3 +22,144 @@
 .code-cell,.big-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 .big-code{font-size:24px;font-weight:800;margin:8px 0}
 @media(max-width:900px){.jenkins-hero{grid-template-columns:1fr}}
+
+/* Selected project */
+.selected-project-box {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 18px;
+  background: var(--surface2);
+}
+
+.selected-project-label {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  margin: 0 0 7px 2px;
+}
+
+.selected-project-box select {
+  width: 100%;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 10px;
+  outline: 0;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.selected-project-box select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-fill);
+}
+
+.selected-project-loading {
+  color: var(--muted);
+  font-size: 10px;
+  padding: 4px 2px;
+}
+
+/* Pipeline states */
+.stage-node.passed {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.stage-node.failed {
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+.stage-node.running {
+  background: var(--yellow-bg);
+  color: var(--yellow);
+}
+
+.stage-node.unknown {
+  background: var(--surface2);
+  color: var(--muted);
+}
+
+.stage-line.passed {
+  background: var(--green);
+}
+
+.stage-line.failed {
+  background: var(--red);
+}
+
+.stage-line.running {
+  background: var(--yellow);
+}
+
+.stage-line.unknown {
+  background: var(--border);
+}
+
+.selected-release-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.selected-release-banner > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.selected-release-banner .eyebrow {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+
+.selected-release-banner b {
+  font-size: 14px;
+}
+
+.selected-release-banner small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.app.dark {
+  color: #f4f6fa;
+}
+
+.app.dark .page-heading h2,
+.app.dark .card-header h3,
+.app.dark .metric-value,
+.app.dark .release-hero h3,
+.app.dark .decision-head h3,
+.app.dark .big-risk h3,
+.app.dark .signal b,
+.app.dark .project-title h3,
+.app.dark .summary-title,
+.app.dark .jenkins-connection h3 {
+  color: #f4f6fa;
+}
+
+@media (max-width: 800px) {
+  .selected-project-box {
+    margin-bottom: 14px;
+  }
+
+  .selected-release-banner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
