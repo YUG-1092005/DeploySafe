@@ -5,8 +5,25 @@ const router = Router();
 
 router.get("/:releaseId", async (req, res, next) => {
   try {
+    // const { rows } = await query(
+    //   "SELECT * FROM releases WHERE id::text = $1 OR release_key = $1",
+    //   [req.params.releaseId],
+    // );
     const { rows } = await query(
-      "SELECT * FROM releases WHERE id::text = $1 OR release_key = $1",
+      `
+  SELECT
+    r.*,
+    pr.status AS build_status
+  FROM releases r
+  LEFT JOIN LATERAL (
+    SELECT status
+    FROM pipeline_runs
+    WHERE release_id = r.id
+    ORDER BY created_at DESC
+    LIMIT 1
+  ) pr ON true
+  WHERE r.id::text = $1 OR r.release_key = $1
+  `,
       [req.params.releaseId],
     );
     if (!rows.length)
