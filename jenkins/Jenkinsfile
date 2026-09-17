@@ -63,7 +63,7 @@ pipeline {
                     }
 
                     def reportStatus = bat(
-                        script: 'node -e "const p=require(\'deploysafe-test-results.json\'); if(p.success === true && p.numFailedTests === 0 && p.numPassedTests === p.numTotalTests && p.numTotalTests > 0) { console.log(\'Verified: \' + p.numPassedTests + \'/\' + p.numTotalTests + \' tests passed\'); process.exit(0); } else { console.error(\'Tests failed according to report\'); process.exit(1); }"',
+                        script: 'node -e "const p=require(\'./deploysafe-test-results.json\'); if(p.success === true && p.numFailedTests === 0 && p.numPassedTests === p.numTotalTests && p.numTotalTests > 0) { console.log(\'Verified: \' + p.numPassedTests + \'/\' + p.numTotalTests + \' tests passed\'); process.exit(0); } else { console.error(\'Tests failed according to report\'); process.exit(1); }"',
                         returnStatus: true
                     )
 
