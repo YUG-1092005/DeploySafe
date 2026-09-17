@@ -99,6 +99,22 @@ for (const file of [
     num(vulnerabilities.low)
 }
 
+
+
+// -------------------------
+// Coverage
+// -------------------------
+
+const coverageReport = readJson(
+  process.env.COVERAGE_SUMMARY_FILE || 'Frontend/coverage/coverage-summary.json'
+)
+
+let coverage = 0
+
+if (coverageReport?.total?.lines?.pct !== undefined) {
+  coverage = num(coverageReport.total.lines.pct)
+}
+
 // -------------------------
 // Final metrics
 // -------------------------
