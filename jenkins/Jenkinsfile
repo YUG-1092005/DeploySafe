@@ -52,7 +52,7 @@ pipeline {
 
         stage('Unit Tests') {
             steps {
-                bat 'cd frontend && npm test'
+                bat 'cd Frontend && npm test'
             }
         }
 
