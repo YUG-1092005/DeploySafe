@@ -13,8 +13,8 @@ pipeline {
     environment {
         DEPLOYSAFE_API_URL = credentials('deploysafe-api-url')
         DEPLOYSAFE_API_TOKEN = credentials('deploysafe-api-token')
+        DEPLOYSAFE_REPO = 'https://github.com/YUG-1092005/DeploySafe'
     }
-
     stages {
         stage('Checkout') {
             steps {
