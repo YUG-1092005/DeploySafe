@@ -29,7 +29,7 @@ describe('DeploySafe API client', () => {
 
     await api.dashboard()
 
-    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(fetch).toHaveBeenCalledTimes(2)
 
     const [, options] = fetch.mock.calls[0]
 
