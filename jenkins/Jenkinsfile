@@ -82,12 +82,12 @@ pipeline {
             steps {
                 script {
                     def hasCoverageScript = bat(
-                        script: 'cd frontend && node -e "const p=require(\'./package.json\'); process.exit(p.scripts && p.scripts[\'test:coverage\'] ? 0 : 1)"',
+                        script: 'cd Frontend && node -e "const p=require(\'./package.json\'); process.exit(p.scripts && p.scripts[\'test:coverage\'] ? 0 : 1)"',
                         returnStatus: true
                     ) == 0
 
                     if (hasCoverageScript) {
-                        bat 'cd frontend && npm run test:coverage'
+                        bat 'cd Frontend && npm run test:coverage'
                     } else {
                         echo 'No test:coverage script configured; coverage will remain UNKNOWN.'
                     }
@@ -109,8 +109,8 @@ pipeline {
 
         stage('Security Scan') {
             steps {
-                bat 'cd frontend && npm audit --json > ..\\deploysafe-frontend-audit.json || exit /b 0'
-                bat 'cd backend && npm audit --json > ..\\deploysafe-backend-audit.json || exit /b 0'
+                bat 'cd Frontend && npm audit --json > ..\\deploysafe-frontend-audit.json || exit /b 0'
+                bat 'cd Backend && npm audit --json > ..\\deploysafe-backend-audit.json || exit /b 0'
             }
         }
 
@@ -118,14 +118,14 @@ pipeline {
             steps {
                 script {
                     def hasLoadTest = bat(
-                        script: 'cd backend && node -e "const p=require(\'./package.json\'); process.exit(p.scripts && p.scripts[\'load:test\'] ? 0 : 1)"',
+                        script: 'cd Backend && node -e "const p=require(\'./package.json\'); process.exit(p.scripts && p.scripts[\'load:test\'] ? 0 : 1)"',
                         returnStatus: true
                     ) == 0
 
                     if (hasLoadTest) {
-                        bat 'cd backend && npm run load:test'
+                        bat 'cd Backend && npm run load:test'
                     } else {
-                        echo 'No backend load:test script configured; p95 response time will remain UNKNOWN.'
+                        echo 'No Backend load:test script configured; p95 response time will remain UNKNOWN.'
                     }
                 }
             }
