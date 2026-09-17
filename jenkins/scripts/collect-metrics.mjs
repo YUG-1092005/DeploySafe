@@ -27,11 +27,20 @@ let testsPassed = 0
 let testsTotal = 0
 
 if (testReport) {
-  testsPassed = num(testReport.numPassedTests)
-  testsTotal = num(testReport.numTotalTests)
+  // Jest-style report
+  if (
+    testReport.numPassedTests !== undefined ||
+    testReport.numTotalTests !== undefined
+  ) {
+    testsPassed = num(testReport.numPassedTests)
+    testsTotal = num(testReport.numTotalTests)
+  }
 
-  // Fallback for another report shape
-  if (testsTotal === 0 && Array.isArray(testReport.testResults)) {
+  // Vitest JSON report
+  if (
+    testsTotal === 0 &&
+    Array.isArray(testReport.testResults)
+  ) {
     for (const suite of testReport.testResults) {
       for (const test of suite.assertionResults || []) {
         testsTotal++
@@ -42,44 +51,22 @@ if (testReport) {
       }
     }
   }
-}
 
-// -------------------------
-// Coverage
-// -------------------------
-
-let coverage = 0
-
-const coverageSummary = readJson(
-  process.env.COVERAGE_FILE ||
-  'frontend/coverage/coverage-summary.json'
-)
-
-if (coverageSummary?.total?.lines?.pct !== undefined) {
-  coverage = num(coverageSummary.total.lines.pct)
-} else {
-  const coverageFinal = readJson(
-    'frontend/coverage/coverage-final.json'
-  )
-
-  if (coverageFinal) {
-    let total = 0
-    let covered = 0
-
-    for (const file of Object.values(coverageFinal)) {
-      const lines = file?.l || {}
-
-      for (const value of Object.values(lines)) {
-        total++
-
-        if (Number(value) > 0) {
-          covered++
-        }
+  // Another possible Vitest report structure
+  if (
+    testsTotal === 0 &&
+    Array.isArray(testReport.testResults)
+  ) {
+    for (const suite of testReport.testResults) {
+      if (suite.numPassingTests !== undefined) {
+        testsPassed += num(suite.numPassingTests)
       }
-    }
 
-    if (total > 0) {
-      coverage = Number(((covered / total) * 100).toFixed(2))
+      if (suite.numFailingTests !== undefined) {
+        testsTotal +=
+          num(suite.numPassingTests) +
+          num(suite.numFailingTests)
+      }
     }
   }
 }

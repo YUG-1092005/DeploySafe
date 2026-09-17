@@ -25,7 +25,7 @@ pipeline {
 
         stage('Install Frontend Dependencies') {
             steps {
-                dir('frontend') {
+                dir('Frontend') {
                     bat 'npm ci'
                 }
             }
@@ -33,7 +33,7 @@ pipeline {
 
         stage('Install Backend Dependencies') {
             steps {
-                dir('backend') {
+                dir('Backend') {
                     bat 'npm ci'
                 }
             }
@@ -41,10 +41,10 @@ pipeline {
 
         stage('Build') {
             steps {
-                dir('frontend') {
+                dir('Frontend') {
                     bat 'npm run build --if-present'
                 }
-                dir('backend') {
+                dir('Backend') {
                     bat 'npm run build --if-present'
                 }
             }
@@ -62,22 +62,14 @@ pipeline {
                 error('Vitest did not generate deploysafe-test-results.json')
             }
 
-            def reportStatus = bat(
-                script: 'node jenkins/scripts/check-test-results.mjs',
-                returnStatus: true
-            )
-
-            if (reportStatus != 0) {
-                error('Actual unit tests failed according to the Vitest JSON report.')
-            }
-
             if (testStatus != 0) {
-                echo 'Vitest returned a non-zero exit code, but the generated test report says all tests passed. Continuing based on the verified test report.'
+                error('Frontend unit tests failed.')
             }
+
+            echo 'Frontend unit tests passed.'
         }
     }
 }
-
         stage('Coverage') {
     steps {
         script {
@@ -87,34 +79,28 @@ pipeline {
             ) == 0
 
             if (hasCoverageScript) {
+
                 def coverageStatus = bat(
                     script: 'cd Frontend && npm run test:coverage',
                     returnStatus: true
                 )
 
-                if (!fileExists('deploysafe-test-results.json')) {
-                    error('Vitest did not generate deploysafe-test-results.json for coverage run')
-                }
-
-                def reportStatus = bat(
-                    script: 'node jenkins/scripts/check-test-results.mjs',
-                    returnStatus: true
-                )
-
-                if (reportStatus != 0) {
-                    error('Coverage run failed according to the Vitest JSON report.')
-                }
-
                 if (coverageStatus != 0) {
-                    echo 'Vitest returned a non-zero exit code during coverage, but the generated test report says all tests passed. Continuing based on the verified test report.'
+                    error('Frontend coverage tests failed.')
                 }
+
+                if (!fileExists('Frontend/coverage/coverage-summary.json')) {
+                    error('Coverage report was not generated.')
+                }
+
+                echo 'Coverage report generated successfully.'
+
             } else {
                 echo 'No test:coverage script configured; coverage will remain UNKNOWN.'
             }
         }
     }
 }
-
         stage('Code Quality') {
             steps {
                 script {
@@ -151,21 +137,22 @@ pipeline {
             }
         }
 
-        stage('Collect Results') {
-            steps {
-                script {
-                    def status = currentBuild.currentResult ?: 'SUCCESS'
 
-                    withEnv([
-                        "BUILD_STATUS=${status}",
-                        "COVERAGE_FILE=frontend/coverage/coverage-summary.json",
-                        "JEST_RESULTS_FILE=deploysafe-test-results.json"
-                    ]) {
-                        bat 'node jenkins/scripts/collect-metrics.mjs'
-                    }
-                }
+        stage('Collect Results') {
+    steps {
+        script {
+            def status = currentBuild.currentResult ?: 'SUCCESS'
+
+            withEnv([
+                "BUILD_STATUS=${status}",
+                "COVERAGE_FILE=Frontend/coverage/coverage-summary.json",
+                "JEST_RESULTS_FILE=deploysafe-test-results.json"
+            ]) {
+                bat 'node jenkins/scripts/collect-metrics.mjs'
             }
         }
+    }
+}
 
         stage('Send Results to DeploySafe') {
             steps {

@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run --reporter=json --outputFile=../deploysafe-test-results.json",
-    "test:coverage": "vitest run --coverage --reporter=dot"
+    "test:coverage": "vitest run --coverage --reporter=json --outputFile=../deploysafe-test-results.json"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
