@@ -22,6 +22,7 @@ router.get("/:releaseId", async (req, res, next) => {
       securityWarnings: r.security_warnings,
       criticalVulnerabilities: r.critical_vulnerabilities,
       p95ResponseMs: r.p95_response_ms,
+      buildStatus: r.build_status,
     });
     res.json({
       success: true,
