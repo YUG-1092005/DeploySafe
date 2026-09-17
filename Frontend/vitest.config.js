@@ -3,11 +3,15 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react],
-
   test: {
     environment: 'jsdom',
     globals: true,
-    clearMocks: true
+    clearMocks: true,
+    poolOptions: {
+      forks: {
+        execArgv: ['--no-experimental-webstorage']
+      }
+    }
   },
 
   coverage: {
