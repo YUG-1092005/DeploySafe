@@ -11,8 +11,8 @@ export default defineConfig({
   },
 
   coverage: {
-    reporter: ['text', 'json-summary'],
-    reportsDirectory: './coverage',
-    include: ['src/api.js']
-  }
+  reporter: ['text', 'json', 'json-summary'],
+  reportsDirectory: './coverage',
+  include: ['src/**/*.js', 'src/**/*.jsx']
+}
 })
