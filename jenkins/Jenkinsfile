@@ -52,24 +52,7 @@ pipeline {
 
         stage('Unit Tests') {
             steps {
-                script {
-                    def hasTestScript = bat(
-                        script: 'cd frontend && node -e "const p=require(\'./package.json\'); process.exit(p.scripts && p.scripts.test ? 0 : 1)"',
-                        returnStatus: true
-                    ) == 0
-
-                    if (hasTestScript) {
-                        def testResult = bat(
-                            script: 'cd frontend && npm test -- --runInBand --watch=false',
-                            returnStatus: true
-                        )
-                        if (testResult != 0) {
-                            error('Frontend unit tests failed')
-                        }
-                    } else {
-                        echo 'Frontend has no test script; unit-test metric will remain UNKNOWN.'
-                    }
-                }
+                bat 'cd frontend && npm test'
             }
         }
 
@@ -130,7 +113,12 @@ pipeline {
             steps {
                 script {
                     def status = currentBuild.currentResult ?: 'SUCCESS'
-                    withEnv(["BUILD_STATUS=${status}"]) {
+
+                    withEnv([
+                        "BUILD_STATUS=${status}",
+                        "COVERAGE_FILE=frontend/coverage/coverage-summary.json",
+                        "JEST_RESULTS_FILE=deploysafe-test-results.json"
+                    ]) {
                         bat 'node jenkins/scripts/collect-metrics.mjs'
                     }
                 }
