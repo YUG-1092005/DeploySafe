@@ -1,162 +1,141 @@
 import fs from 'fs'
 
-function number(value, fallback = 0) {
+function readJson(file) {
+  if (!file || !fs.existsSync(file)) return null
+
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'))
+  } catch {
+    return null
+  }
+}
+
+function num(value, fallback = 0) {
   const n = Number(value)
   return Number.isFinite(n) ? n : fallback
 }
 
-function readJson(paths) {
-  for (const path of paths) {
-    if (!path || !fs.existsSync(path)) continue
+// -------------------------
+// Unit test results
+// -------------------------
 
-    try {
-      return {
-        path,
-        data: JSON.parse(fs.readFileSync(path, 'utf8'))
-      }
-    } catch {
-      // Try the next possible file.
-    }
-  }
+const testReport = readJson(
+  process.env.JEST_RESULTS_FILE || 'deploysafe-test-results.json'
+)
 
-  return null
-}
+let testsPassed = 0
+let testsTotal = 0
 
-function calculateCoverageFromFinalReport(report) {
-  if (!report || typeof report !== 'object') return 0
+if (testReport) {
+  testsPassed = num(testReport.numPassedTests)
+  testsTotal = num(testReport.numTotalTests)
 
-  let totalLines = 0
-  let coveredLines = 0
+  // Fallback for another report shape
+  if (testsTotal === 0 && Array.isArray(testReport.testResults)) {
+    for (const suite of testReport.testResults) {
+      for (const test of suite.assertionResults || []) {
+        testsTotal++
 
-  for (const file of Object.values(report)) {
-    if (!file || !file.l) continue
-
-    for (const value of Object.values(file.l)) {
-      totalLines += 1
-
-      if (Number(value) > 0) {
-        coveredLines += 1
+        if (test.status === 'passed') {
+          testsPassed++
+        }
       }
     }
   }
-
-  if (totalLines === 0) return 0
-
-  return Number(((coveredLines / totalLines) * 100).toFixed(2))
 }
 
-/*
- * Vitest's JSON reporter produces fields such as:
- *   numPassedTests
- *   numTotalTests
- *   numFailedTests
- *
- * We also support Jest-style reports.
- */
-const testReport = readJson([
-  process.env.JEST_RESULTS_FILE,
-  'deploysafe-test-results.json'
-])
+// -------------------------
+// Coverage
+// -------------------------
 
-let testsPassed = number(process.env.TESTS_PASSED)
-let testsTotal = number(process.env.TESTS_TOTAL)
+let coverage = 0
 
-if (testReport?.data) {
-  const report = testReport.data
+const coverageSummary = readJson(
+  process.env.COVERAGE_FILE ||
+  'frontend/coverage/coverage-summary.json'
+)
 
-  testsPassed = number(
-    report.numPassedTests ??
-    report.numPassed ??
-    testsPassed
+if (coverageSummary?.total?.lines?.pct !== undefined) {
+  coverage = num(coverageSummary.total.lines.pct)
+} else {
+  const coverageFinal = readJson(
+    'frontend/coverage/coverage-final.json'
   )
 
-  testsTotal = number(
-    report.numTotalTests ??
-    report.numTotal ??
-    (
-      number(report.numPassedTests) +
-      number(report.numFailedTests) +
-      number(report.numPendingTests) +
-      number(report.numTodoTests)
-    ),
-    testsTotal
-  )
+  if (coverageFinal) {
+    let total = 0
+    let covered = 0
+
+    for (const file of Object.values(coverageFinal)) {
+      const lines = file?.l || {}
+
+      for (const value of Object.values(lines)) {
+        total++
+
+        if (Number(value) > 0) {
+          covered++
+        }
+      }
+    }
+
+    if (total > 0) {
+      coverage = Number(((covered / total) * 100).toFixed(2))
+    }
+  }
 }
 
-/*
- * Prefer coverage-summary.json.
- * If it does not exist, calculate line coverage from coverage-final.json.
- */
-const coverageSummary = readJson([
-  process.env.COVERAGE_FILE,
-  'frontend/coverage/coverage-summary.json',
-  'coverage/coverage-summary.json'
-])
+// -------------------------
+// Security
+// -------------------------
 
-const coverageFinal = readJson([
-  'frontend/coverage/coverage-final.json',
-  'coverage/coverage-final.json'
-])
+let securityWarnings = 0
+let criticalVulnerabilities = 0
 
-let coveragePct = number(process.env.COVERAGE)
-
-if (
-  coverageSummary?.data?.total?.lines?.pct !== undefined
-) {
-  coveragePct = number(
-    coverageSummary.data.total.lines.pct,
-    coveragePct
-  )
-} else if (coverageFinal?.data) {
-  coveragePct = calculateCoverageFromFinalReport(coverageFinal.data)
-}
-
-/*
- * npm audit JSON can be produced separately for frontend/backend.
- */
-let criticalVulnerabilities = number(process.env.CRITICAL_VULNERABILITIES)
-let securityWarnings = number(process.env.SECURITY_WARNINGS)
-
-const auditFiles = [
-  process.env.SECURITY_RESULTS_FILE,
+for (const file of [
   'deploysafe-frontend-audit.json',
-  'deploysafe-backend-audit.json',
-  'deploysafe-audit.json'
-].filter(Boolean)
+  'deploysafe-backend-audit.json'
+]) {
+  const audit = readJson(file)
 
-for (const file of auditFiles) {
-  if (!fs.existsSync(file)) continue
+  const vulnerabilities =
+    audit?.metadata?.vulnerabilities
 
-  try {
-    const audit = JSON.parse(fs.readFileSync(file, 'utf8'))
-    const vulnerabilities = audit.metadata?.vulnerabilities
+  if (!vulnerabilities) continue
 
-    if (!vulnerabilities) continue
+  criticalVulnerabilities += num(
+    vulnerabilities.critical
+  )
 
-    criticalVulnerabilities += number(vulnerabilities.critical)
-
-    securityWarnings +=
-      number(vulnerabilities.high) +
-      number(vulnerabilities.moderate) +
-      number(vulnerabilities.low)
-  } catch {
-    // Ignore malformed audit files.
-  }
+  securityWarnings +=
+    num(vulnerabilities.high) +
+    num(vulnerabilities.moderate) +
+    num(vulnerabilities.low)
 }
+
+// -------------------------
+// Final metrics
+// -------------------------
 
 const result = {
   testsPassed,
   testsTotal,
-  coverage: coveragePct,
-  sonarRating: process.env.SONAR_RATING || 'UNKNOWN',
+  coverage,
+
+  sonarRating:
+    process.env.SONAR_RATING || 'UNKNOWN',
+
   securityWarnings,
   criticalVulnerabilities,
-  p95ResponseMs: number(process.env.P95_RESPONSE_MS),
-  buildStatus: process.env.BUILD_STATUS || 'UNKNOWN'
+
+  p95ResponseMs:
+    num(process.env.P95_RESPONSE_MS),
+
+  buildStatus:
+    process.env.BUILD_STATUS || 'UNKNOWN'
 }
 
 fs.writeFileSync(
-  process.env.OUTPUT_FILE || 'deploysafe-metrics.json',
+  'deploysafe-metrics.json',
   JSON.stringify(result, null, 2)
 )
 
