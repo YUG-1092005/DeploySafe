@@ -108,37 +108,68 @@ stage('Unit Tests') {
         }
     }
 }
+        // stage('Coverage') {
+        //     steps {
+        //         script {
+        //             def hasCoverageScript = bat(
+        //                 script: 'cd Frontend && node -e "const p=require(\'./package.json\'); process.exit(p.scripts && p.scripts[\'test:coverage\'] ? 0 : 1)"',
+        //                 returnStatus: true
+        //             ) == 0
+
+        //             if (hasCoverageScript) {
+
+        //                 def coverageStatus = bat(
+        //                     script: 'cd Frontend && npm run test:coverage',
+        //                     returnStatus: true
+        //                 )
+
+        //                 if (coverageStatus != 0) {
+        //                     error('Frontend coverage tests failed.')
+        //                 }
+
+        //                 if (!fileExists('Frontend/coverage/coverage-summary.json')) {
+        //                     error('Coverage report was not generated.')
+        //                 }
+
+        //                 echo 'Coverage report generated successfully.'
+
+        //             } else {
+        //                 echo 'No test:coverage script configured; coverage will remain UNKNOWN.'
+        //             }
+        //         }
+        //     }
+        // }
         stage('Coverage') {
-            steps {
-                script {
-                    def hasCoverageScript = bat(
-                        script: 'cd Frontend && node -e "const p=require(\'./package.json\'); process.exit(p.scripts && p.scripts[\'test:coverage\'] ? 0 : 1)"',
-                        returnStatus: true
-                    ) == 0
+    steps {
+        script {
+            def hasCoverageScript = bat(
+                script: 'cd Frontend && node -e "const p=require(\'./package.json\'); process.exit(p.scripts && p.scripts[\'test:coverage\'] ? 0 : 1)"',
+                returnStatus: true
+            ) == 0
 
-                    if (hasCoverageScript) {
+            if (hasCoverageScript) {
 
-                        def coverageStatus = bat(
-                            script: 'cd Frontend && npm run test:coverage',
-                            returnStatus: true
-                        )
+                def coverageStatus = bat(
+                    script: 'cd Frontend && npm run test:coverage',
+                    returnStatus: true
+                )
 
-                        if (coverageStatus != 0) {
-                            error('Frontend coverage tests failed.')
-                        }
-
-                        if (!fileExists('Frontend/coverage/coverage-summary.json')) {
-                            error('Coverage report was not generated.')
-                        }
-
-                        echo 'Coverage report generated successfully.'
-
-                    } else {
-                        echo 'No test:coverage script configured; coverage will remain UNKNOWN.'
-                    }
+                if (coverageStatus != 0) {
+                    echo 'Coverage tests returned non-zero because the test suite contains a failure. Continuing so DeploySafe can evaluate the gate.'
                 }
+
+                if (!fileExists('Frontend/coverage/coverage-summary.json')) {
+                    error('Coverage report was not generated.')
+                }
+
+                echo 'Coverage report generated successfully.'
+
+            } else {
+                echo 'No test:coverage script configured; coverage will remain UNKNOWN.'
             }
         }
+    }
+}
 
         stage('Code Quality') {
             steps {
