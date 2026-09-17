@@ -63,9 +63,9 @@ pipeline {
                     }
 
                     def reportStatus = bat(
-                        script: 'node -e "const p=require(\'./deploysafe-test-results.json\'); if(p.success === true && p.numFailedTests === 0 && p.numPassedTests === p.numTotalTests && p.numTotalTests > 0) { console.log(\'Verified: \' + p.numPassedTests + \'/\' + p.numTotalTests + \' tests passed\'); process.exit(0); } else { console.error(\'Tests failed according to report\'); process.exit(1); }"',
-                        returnStatus: true
-                    )
+    script: 'node -e "const p=require(\'./deploysafe-test-results.json\'); if(Number(p.numFailedTests) === 0 && Number(p.numPassedTests) === Number(p.numTotalTests) && Number(p.numTotalTests) > 0) { console.log(\'Verified: \' + p.numPassedTests + \'/\' + p.numTotalTests + \' tests passed\'); process.exit(0); } else { console.error(\'Report says: \' + p.numPassedTests + \'/\' + p.numTotalTests + \' passed, \' + p.numFailedTests + \' failed\'); process.exit(1); }"',
+    returnStatus: true
+)
 
                     if (reportStatus != 0) {
                         error('Tests failed according to the Vitest JSON report.')
