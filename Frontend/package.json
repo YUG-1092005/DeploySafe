@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run --reporter=json --outputFile=../deploysafe-test-results.json",
+    "test": "vitest run --reporter=default --reporter=json --outputFile=../deploysafe-test-results.json",
     "test:coverage": "vitest run --coverage --reporter=json --outputFile=../deploysafe-test-results.json"
   },
   "dependencies": {
