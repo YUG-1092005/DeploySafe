@@ -11,13 +11,12 @@ export default defineConfig({
       forks: {
         execArgv: ['--no-experimental-webstorage']
       }
+    },
+    coverage: {
+      reporter: ['text', 'json', 'json-summary'],
+      reportsDirectory: './coverage',
+      include: ['src/**/*.{js,jsx,ts,tsx}'],
+      exclude: ['src/**/*.test.{js,jsx,ts,tsx}', 'src/**/*.d.ts']
     }
-  },
-
-  coverage: {
-  reporter: ['text', 'json', 'json-summary'],
-  reportsDirectory: './coverage',
-  include: ['src/**/*.{js,jsx,ts,tsx}'],
-  exclude: ['src/**/*.test.{js,jsx,ts,tsx}', 'src/**/*.d.ts']
-}
+  }
 })
