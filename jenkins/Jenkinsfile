@@ -140,7 +140,7 @@ pipeline {
         stage('Send Results to DeploySafe') {
             steps {
                 script {
-                    def duration = currentBuild.duration ? Math.round(currentBuild.duration / 1000) : 0
+                    def duration = currentBuild.duration ? (currentBuild.duration.intdiv(1000)) : 0
                     withEnv(["BUILD_DURATION_SECONDS=${duration}"]) {
                         bat 'node jenkins/scripts/send-results.mjs'
                     }
