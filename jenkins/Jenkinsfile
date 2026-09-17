@@ -50,36 +50,64 @@ pipeline {
             }
         }
 
-        stage('Unit Tests') {
-                steps {
-                script {
-                    def testStatus = bat(
-                        script: 'cd Frontend && npm test',
-                        returnStatus: true
-                    )
+//         stage('Unit Tests') {
+//                 steps {
+//                 script {
+//                     def testStatus = bat(
+//                         script: 'cd Frontend && npm test',
+//                         returnStatus: true
+//                     )
 
-                    if (!fileExists('deploysafe-test-results.json')) {
-                        error('Vitest did not generate deploysafe-test-results.json')
-                    }
+//                     if (!fileExists('deploysafe-test-results.json')) {
+//                         error('Vitest did not generate deploysafe-test-results.json')
+//                     }
 
-                    def reportStatus = bat(
-    script: 'node -e "const p=require(\'./deploysafe-test-results.json\'); if(Number(p.numFailedTests) === 0 && Number(p.numPassedTests) === Number(p.numTotalTests) && Number(p.numTotalTests) > 0) { console.log(\'Verified: \' + p.numPassedTests + \'/\' + p.numTotalTests + \' tests passed\'); process.exit(0); } else { console.error(\'Report says: \' + p.numPassedTests + \'/\' + p.numTotalTests + \' passed, \' + p.numFailedTests + \' failed\'); process.exit(1); }"',
-    returnStatus: true
-)
+//                     def reportStatus = bat(
+//     script: 'node -e "const p=require(\'./deploysafe-test-results.json\'); if(Number(p.numFailedTests) === 0 && Number(p.numPassedTests) === Number(p.numTotalTests) && Number(p.numTotalTests) > 0) { console.log(\'Verified: \' + p.numPassedTests + \'/\' + p.numTotalTests + \' tests passed\'); process.exit(0); } else { console.error(\'Report says: \' + p.numPassedTests + \'/\' + p.numTotalTests + \' passed, \' + p.numFailedTests + \' failed\'); process.exit(1); }"',
+//     returnStatus: true
+// )
 
-                    if (reportStatus != 0) {
-                        error('Tests failed according to the Vitest JSON report.')
-                    }
+//                     if (reportStatus != 0) {
+//                         error('Tests failed according to the Vitest JSON report.')
+//                     }
 
-                    if (testStatus != 0) {
-                        echo 'Vitest returned a non-zero exit code, but the JSON report confirms that all tests passed. Continuing.'
-                    }
+//                     if (testStatus != 0) {
+//                         echo 'Vitest returned a non-zero exit code, but the JSON report confirms that all tests passed. Continuing.'
+//                     }
 
-                    echo 'Frontend unit tests passed successfully.'
-                }
+//                     echo 'Frontend unit tests passed successfully.'
+//                 }
+//             }
+//         }
+stage('Unit Tests') {
+    steps {
+        script {
+            def testStatus = bat(
+                script: 'cd Frontend && npm test',
+                returnStatus: true
+            )
+
+            if (!fileExists('deploysafe-test-results.json')) {
+                error('Vitest did not generate deploysafe-test-results.json')
             }
-        }
 
+            def reportStatus = bat(
+                script: 'node -e "const p=require(\'./deploysafe-test-results.json\'); if(Number(p.numFailedTests) === 0 && Number(p.numPassedTests) === Number(p.numTotalTests) && Number(p.numTotalTests) > 0) { console.log(\'Verified: \' + p.numPassedTests + \'/\' + p.numTotalTests + \' tests passed\'); process.exit(0); } else { console.error(\'Report says: \' + p.numPassedTests + \'/\' + p.numTotalTests + \' passed, \' + p.numFailedTests + \' failed\'); process.exit(1); }"',
+                returnStatus: true
+            )
+
+            if (reportStatus != 0) {
+                echo 'Tests failed according to the Vitest JSON report. Continuing so DeploySafe can evaluate the deployment gate.'
+            }
+
+            if (testStatus != 0) {
+                echo 'Vitest returned a non-zero exit code. Continuing so DeploySafe can evaluate the deployment gate.'
+            }
+
+            echo "Unit test stage completed. Vitest exit code: ${testStatus}"
+        }
+    }
+}
         stage('Coverage') {
             steps {
                 script {
