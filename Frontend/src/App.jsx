@@ -224,7 +224,7 @@ function Shell({ dark, setDark, logout }) {
             <Route path="/pipeline" element={<Pipeline />} />
             <Route path="/jenkins" element={<JenkinsPage />} />
             <Route path="/risk" element={<Risk />} />
-            <Route path="/history" element={<HistoryPage />} />
+            {/* <Route path="/history" element={<HistoryPage />} /> */}
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
@@ -308,7 +308,7 @@ function Sidebar({ open, close, logout }) {
     ["/pipeline", "Pipeline", GitBranch],
     ["/jenkins", "Jenkins CI/CD", Rocket],
     ["/risk", "Risk Analysis", ShieldCheck],
-    ["/history", "Deployment History", History],
+    // ["/history", "Deployment History", History],
   ];
 
   const projectsState = useApi(api.projects);
@@ -427,13 +427,13 @@ function Sidebar({ open, close, logout }) {
             Settings
           </button>
 
-          <button
+          {/* <button
             className="nav-item"
             onClick={() => window.open("#", "_self")}
           >
             <CircleHelp size={19} />
             Documentation
-          </button>
+          </button> */}
         </nav>
 
         <div className="sidebar-bottom">
@@ -1739,73 +1739,73 @@ function RiskData({ d }) {
   );
 }
 
-function HistoryPage() {
-  const s = useApi(api.deployments);
-  if (s.loading) return <Loading />;
-  if (s.error) return <ErrorState message={s.error} reload={s.reload} />;
-  let rows = s.data || [];
-  return (
-    <>
-      <HeaderPage
-        title="Deployment History"
-        subtitle="Deployment decisions recorded by the backend."
-      />
-      <div className="history-stats">
-        <Metric title="Total events" value={rows.length} icon={History} />
-        <Metric
-          title="Successful"
-          value={rows.filter((x) => x.status === "SUCCESS").length}
-          icon={CheckCircle2}
-        />
-        <Metric
-          title="Blocked"
-          value={rows.filter((x) => x.status === "BLOCKED").length}
-          icon={XCircle}
-        />
-      </div>
-      <div className="card">
-        {rows.length ? (
-          <div className="timeline">
-            {rows.map((x) => (
-              <div className="timeline-item" key={x.id}>
-                <div
-                  className={`timeline-dot ${String(x.status).toLowerCase()}`}
-                >
-                  {x.status === "BLOCKED" ? (
-                    <XCircle size={16} />
-                  ) : (
-                    <CheckCircle2 size={16} />
-                  )}
-                </div>
-                <div className="timeline-main">
-                  <b>
-                    {x.version || x.release_key || "Release"} ·{" "}
-                    {x.project_name || "Project"}
-                  </b>
-                  <p>{x.reason || "No reason recorded."}</p>
-                </div>
-                <div className="timeline-side">
-                  <RiskPill value={x.risk} />
-                  <small>
-                    {x.created_at
-                      ? new Date(x.created_at).toLocaleString()
-                      : "—"}
-                  </small>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <Empty
-            icon={History}
-            title="No deployment events"
-            text="History will appear after a deployment decision is recorded."
-          />
-        )}
-      </div>
-    </>
-  );
-}
+// function HistoryPage() {
+//   const s = useApi(api.deployments);
+//   if (s.loading) return <Loading />;
+//   if (s.error) return <ErrorState message={s.error} reload={s.reload} />;
+//   let rows = s.data || [];
+//   return (
+//     <>
+//       <HeaderPage
+//         title="Deployment History"
+//         subtitle="Deployment decisions recorded by the backend."
+//       />
+//       <div className="history-stats">
+//         <Metric title="Total events" value={rows.length} icon={History} />
+//         <Metric
+//           title="Successful"
+//           value={rows.filter((x) => x.status === "SUCCESS").length}
+//           icon={CheckCircle2}
+//         />
+//         <Metric
+//           title="Blocked"
+//           value={rows.filter((x) => x.status === "BLOCKED").length}
+//           icon={XCircle}
+//         />
+//       </div>
+//       <div className="card">
+//         {rows.length ? (
+//           <div className="timeline">
+//             {rows.map((x) => (
+//               <div className="timeline-item" key={x.id}>
+//                 <div
+//                   className={`timeline-dot ${String(x.status).toLowerCase()}`}
+//                 >
+//                   {x.status === "BLOCKED" ? (
+//                     <XCircle size={16} />
+//                   ) : (
+//                     <CheckCircle2 size={16} />
+//                   )}
+//                 </div>
+//                 <div className="timeline-main">
+//                   <b>
+//                     {x.version || x.release_key || "Release"} ·{" "}
+//                     {x.project_name || "Project"}
+//                   </b>
+//                   <p>{x.reason || "No reason recorded."}</p>
+//                 </div>
+//                 <div className="timeline-side">
+//                   <RiskPill value={x.risk} />
+//                   <small>
+//                     {x.created_at
+//                       ? new Date(x.created_at).toLocaleString()
+//                       : "—"}
+//                   </small>
+//                 </div>
+//               </div>
+//             ))}
+//           </div>
+//         ) : (
+//           <Empty
+//             icon={History}
+//             title="No deployment events"
+//             text="History will appear after a deployment decision is recorded."
+//           />
+//         )}
+//       </div>
+//     </>
+//   );
+// }
 
 function SettingsPage() {
   let u = JSON.parse(localStorage.getItem("deploysafe_user") || "{}");
